@@ -286,7 +286,7 @@ sub list_monthly_new_cpan_dists_html {
             if ($col eq 'author') {
                 $cell = qq(<a href="https://metacpan.org/author/$cell">$cell</a>);
             } elsif ($col eq 'dist') {
-                $cell = qq(<a href="https://metacpan.org/release/$row->{author}/$cell">$cell</a>);
+                $cell = qq(<a href="https://metacpan.org/release/$row->{author}/$row->{release}">$cell</a>);
             }
             push @html, "<td>$cell</td>\n";
         }
