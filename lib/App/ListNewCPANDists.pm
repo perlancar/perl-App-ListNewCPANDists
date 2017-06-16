@@ -160,6 +160,23 @@ sub list_new_cpan_dists {
     my $state = _init(\%args);
     my $dbh = $state->{dbh};
 
+    my $from_time = $args{from_time};
+    my $to_time   = $args{to_time};
+    if (!$to_time) {
+        $to_time = $from_time->clone;
+        $to_time->set_hour(23);
+        $to_time->set_minute(59);
+        $to_time->set_second(59);
+    }
+    if ($args{-orig_to_time} && $args{-orig_to_time} !~ /T\d\d:\d\d:\d\d/) {
+        $to_time->set_hour(23);
+        $to_time->set_minute(59);
+        $to_time->set_second(59);
+    }
+
+    $log->tracef("Retrieving releases from %s to %s ...",
+                 $from_time->datetime, $to_time->datetime);
+
     # list all releases in the time period and collect unique list of
     # distributions
     my $res = _http_tiny->post("$URL_PREFIX/release/_search?size=5000&sort=name", {
@@ -167,8 +184,8 @@ sub list_new_cpan_dists {
             query => {
                 range => {
                     date => {
-                        gte => $args{from_time}->datetime,
-                        lte => $args{to_time}  ->datetime,
+                        gte => $from_time->datetime,
+                        lte => $to_time->datetime,
                     },
                 },
             },
