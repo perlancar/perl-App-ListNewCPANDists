@@ -1,3 +1,10 @@
+0.002   2017-06-16 (PERLANCAR)
+
+	- Add CLIs: list-new-cpan-dists, list-monthly-new-cpan-dists-html.
+
+	- [ux] Set nicer defaults for to_time.
+
+
 0.001   2017-06-15 (PERLANCAR)
 
         - First release.
