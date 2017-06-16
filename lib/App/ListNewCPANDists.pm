@@ -293,7 +293,7 @@ sub list_monthly_new_cpan_dists_html {
     my $cols = $res->[3]{'table.fields'};
     push @html, "<tr>\n";
     for my $col (@$cols) {
-        next if $col eq 'release';
+        next if $col eq 'release' || $col eq 'date';
         push @html, "<th>$col</th>\n";
     }
     push @html, "</tr>\n\n";
@@ -301,7 +301,7 @@ sub list_monthly_new_cpan_dists_html {
     for my $row (@{ $res->[2] }) {
         push @html, "<tr>\n";
         for my $col (@$cols) {
-            next if $col eq 'release';
+            next if $col eq 'release' || $col eq 'date';
             my $cell = HTML::Entities::encode_entities($row->{$col});
             if ($col eq 'author') {
                 $cell = qq(<a href="https://metacpan.org/author/$cell">$cell</a>);
