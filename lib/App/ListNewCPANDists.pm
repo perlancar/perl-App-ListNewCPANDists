@@ -298,21 +298,24 @@ sub list_monthly_new_cpan_dists_html {
     }
     push @html, "</tr>\n\n";
 
-    for my $row (@{ $res->[2] }) {
-        push @html, "<tr>\n";
-        for my $col (@$cols) {
-            next if $col eq 'release' || $col eq 'date';
-            my $cell = HTML::Entities::encode_entities($row->{$col});
-            if ($col eq 'author') {
-                $cell = qq(<a href="https://metacpan.org/author/$cell">$cell</a>);
-            } elsif ($col eq 'dist') {
-                $cell = qq(<a href="https://metacpan.org/release/$row->{author}/$row->{release}">$cell</a>);
+    {
+        no warnings 'uninitialized';
+        for my $row (@{ $res->[2] }) {
+            push @html, "<tr>\n";
+            for my $col (@$cols) {
+                next if $col eq 'release' || $col eq 'date';
+                my $cell = HTML::Entities::encode_entities($row->{$col});
+                if ($col eq 'author') {
+                    $cell = qq(<a href="https://metacpan.org/author/$cell">$cell</a>);
+                } elsif ($col eq 'dist') {
+                    $cell = qq(<a href="https://metacpan.org/release/$row->{author}/$row->{release}">$cell</a>);
+                }
+                push @html, "<td>$cell</td>\n";
             }
-            push @html, "<td>$cell</td>\n";
+            push @html, "</tr>\n";
         }
-        push @html, "</tr>\n";
+        push @html, "</table>\n";
     }
-    push @html, "</table>\n";
 
     [200, "OK", join("", @html), {'cmdline.skip_format'=>1}];
 }
