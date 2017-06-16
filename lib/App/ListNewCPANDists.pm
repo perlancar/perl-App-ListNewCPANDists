@@ -148,9 +148,12 @@ $SPEC{list_new_cpan_dists} = {
     args => {
         from_time => {
             schema => $sch_date,
+            req => 1,
+            pos => 0,
         },
         to_time   => {
             schema => $sch_date,
+            pos => 1,
         },
     },
 };
