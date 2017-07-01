@@ -6,7 +6,7 @@ package App::ListNewCPANDists;
 use 5.010001;
 use strict;
 use warnings;
-use Log::Any '$log';
+use Log::ger;
 
 our %SPEC;
 
@@ -57,7 +57,7 @@ sub _connect_db {
     my ($cpan, $index_name) = @_;
 
     my $db_path = _db_path($cpan, $index_name);
-    $log->tracef("Connecting to SQLite database at %s ...", $db_path);
+    log_trace("Connecting to SQLite database at %s ...", $db_path);
     my $dbh = DBI->connect("dbi:SQLite:dbname=$db_path", undef, undef,
                            {RaiseError=>1});
     #$dbh->do("PRAGMA cache_size = 400000"); # 400M
@@ -177,8 +177,8 @@ sub list_new_cpan_dists {
         $to_time->set_second(59);
     }
 
-    $log->tracef("Retrieving releases from %s to %s ...",
-                 $from_time->datetime, $to_time->datetime);
+    log_trace("Retrieving releases from %s to %s ...",
+              $from_time->datetime, $to_time->datetime);
 
     # list all releases in the time period and collect unique list of
     # distributions
@@ -204,12 +204,12 @@ sub list_new_cpan_dists {
     for my $hit (@{ $api_res->{hits}{hits} }) {
         my $dist = $hit->{fields}{distribution};
         next if $dists{ $dist }++;
-        $log->tracef("Got distribution %s", $dist);
+        log_trace("Got distribution %s", $dist);
         # find the first release of this distribution
         my $relinfo = _get_dist_first_release($state, $dist);
         unless ($relinfo->{time} >= $args{from_time}->epoch &&
                     $relinfo->{time} <= $args{to_time}->epoch) {
-            $log->tracef("First release of distribution %s is not in this time period, skipped", $dist);
+            log_trace("First release of distribution %s is not in this time period, skipped", $dist);
             next;
         }
         push @res, {
