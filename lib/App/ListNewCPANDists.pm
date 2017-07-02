@@ -201,10 +201,13 @@ sub list_new_cpan_dists {
     my $api_res = _json_decode($res->{content});
     my %dists;
     my @res;
+    my $num_hits = @{ $api_res->{hits}{hits} };
+    my $i = 0;
     for my $hit (@{ $api_res->{hits}{hits} }) {
+        $i++;
         my $dist = $hit->{fields}{distribution};
         next if $dists{ $dist }++;
-        log_trace("Got distribution %s", $dist);
+        log_trace("[#%d/%d] Got distribution %s", $i, $num_hits, $dist);
         # find the first release of this distribution
         my $relinfo = _get_dist_first_release($state, $dist);
         unless ($relinfo->{time} >= $args{from_time}->epoch &&
