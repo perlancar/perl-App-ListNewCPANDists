@@ -1,3 +1,9 @@
+0.006   2018-03-12 (PERLANCAR)
+
+	- Add some more documentation, fallback to ~/index-lncd.db if
+	  ~/cpan does not exist [RT#124757].
+
+
 0.005   2017-07-02 (PERLANCAR)
 
 	- No functional changes.
