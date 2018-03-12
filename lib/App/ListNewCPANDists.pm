@@ -176,7 +176,7 @@ $SPEC{list_new_cpan_dists} = {
 This utility queries MetaCPAN to find out what CPAN distributions are new in a
 given time period (i.e. has their first release made during that time period).
 This utility also collects the information in a SQLite database which defaults
-to `~/cpan/index-lncd.db` or `~/index-lncd.db` if `~/cpan~ does not exist. You
+to `~/cpan/index-lncd.db` or `~/index-lncd.db` if `~/cpan~` does not exist. You
 can customize the location of the generated SQLite database using the `cpan` and
 `db_name` arguments.
 
