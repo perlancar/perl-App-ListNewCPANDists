@@ -172,7 +172,7 @@ sub _get_dist_first_release {
     });
 
     die "Can't retrieve first release information of distribution '$dist': ".
-        "$res->[0] - $res->[1]\n" unless $res->{success};
+        "$res->{status} - $res->{reason}\n" unless $res->{success};
     my $api_res = _json_decode($res->{content});
     my $hit = $api_res->{hits}{hits}[0];
     die "No release information for distribution '$dist'" unless $hit;
