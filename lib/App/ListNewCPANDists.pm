@@ -273,8 +273,8 @@ sub list_new_cpan_dists {
         log_trace("[#%d/%d] Got distribution %s", $i, $num_hits, $dist);
         # find the first release of this distribution
         my $relinfo = _get_dist_first_release($state, $dist);
-        unless ($relinfo->{time} >= $args{from_time}->epoch &&
-                    $relinfo->{time} <= $args{to_time}->epoch) {
+        unless ($relinfo->{time} >= $from_time->epoch &&
+                    $relinfo->{time} <= $to_time->epoch) {
             log_trace("First release of distribution %s is not in this time period, skipped", $dist);
             next;
         }
