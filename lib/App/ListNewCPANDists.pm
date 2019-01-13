@@ -218,6 +218,14 @@ _
             pos => 1,
         },
     },
+    examples => [
+        {
+            summary => 'Show new distributions from Jan 1, 2019 to the present',
+            argv => ['2019-01-01'],
+            'x.doc.show_result' => 0,
+            test => 0,
+        },
+    ],
 };
 sub list_new_cpan_dists {
     my %args = @_;
