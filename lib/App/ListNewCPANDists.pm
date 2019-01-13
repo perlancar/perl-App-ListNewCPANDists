@@ -14,6 +14,7 @@ my $sch_date = ['date*', 'x.perl.coerce_to' => 'DateTime'];
 my $URL_PREFIX = 'https://fastapi.metacpan.org/v1';
 
 our $db_schema_spec = {
+    summary => __PACKAGE__,
     latest_v => 1,
     install => [
         'CREATE TABLE release (
