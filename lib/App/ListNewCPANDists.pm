@@ -1,6 +1,8 @@
 package App::ListNewCPANDists;
 
+# AUTHORITY
 # DATE
+# DIST
 # VERSION
 
 use 5.010001;
@@ -322,9 +324,42 @@ sub list_new_cpan_dists {
 
     my %resmeta = (
         'table.fields' => [qw/dist release author version date abstract/],
+        'func.stats' => create_new_cpan_dists_stats(dists => \@res)->[2],
     );
 
     [200, "OK", \@res, \%resmeta];
+}
+
+$SPEC{create_new_cpan_dists_stats} = {
+    v => 1.1,
+    args => {
+        dists => {
+            schema => 'array*',
+        },
+    },
+};
+sub create_new_cpan_dists_stats {
+    my %args = @_;
+    my $dists = $args{dists};
+
+    my %authors;
+    for my $dist (@$dists) {
+        $authors{$dist->{author}} //= {num_dists => 0};
+        $authors{$dist->{author}}{num_dists}++;
+    }
+    my @authors_by_num_dists = map {
+        +{author=>$_, num_dists=>$authors{$_}{num_dists}}
+    } sort { $authors{$b}{num_dists} <=> $authors{$a}{num_dists} }
+    keys %authors;
+    my $num_authors = keys %authors;
+
+    my $stats = {
+        "Number of new CPAN distributions this period" => scalar(@$dists),
+        "Number of authors releasing new CPAN distributions this period" => $num_authors,
+        "Authors by number of new CPAN distributions this period" => \@authors_by_num_dists,
+    };
+
+    [200, "OK", $stats];
 }
 
 $SPEC{list_monthly_new_cpan_dists} = {
@@ -429,6 +464,21 @@ sub list_monthly_new_cpan_dists_html {
                 push @html, "<td>$cell</td>\n";
             }
             push @html, "</tr>\n";
+        }
+        push @html, "</table>\n";
+
+        # stats
+        my $stats = $res->[3]{'func.stats'};
+        push @html, "<h3>Stats</h3>\n";
+        push @html, "<p>Number of new CPAN distributions this period: <b>", $stats->{"Number of new CPAN distributions this period"}, "</b></p>\n";
+        push @html, "<p>Number of authors releasing new CPAN distributions this period: <b>", $stats->{"Number of authors releasing new CPAN distributions this period"}, "</b></p>\n";
+        push @html, "<p>Authors by number of new CPAN distributions this period: </p>\n";
+        push @html, "<table>\n";
+        push @html, "<tr><th>No</th><th>Author</th><th>Distributions</th></tr>\n";
+        my $i = 1;
+        for my $rec (@{ $stats->{"Authors by number of new CPAN distributions this period"} }) {
+            push @html, qq(<tr><td>$i</td><td><a href="https://metacpan.org/author/$rec->{author}">$rec->{author}</a></td><td>$rec->{num_dists}</td></tr>\n);
+            $i++;
         }
         push @html, "</table>\n";
     }
