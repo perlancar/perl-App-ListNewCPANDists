@@ -1,3 +1,8 @@
+0.011   2020-02-06  Released-By: PERLANCAR; Urgency: medium
+
+	- Add stats.
+
+
 0.010   2019-01-13  Released-By: PERLANCAR
 
 	- [bugfix] to_time might not be defined [reported by Chris Hills].
