@@ -12,7 +12,7 @@ use Log::ger;
 
 our %SPEC;
 
-my $sch_date = ['date*', 'x.perl.coerce_to' => 'DateTime'];
+my $sch_date = ['date*', 'x.perl.coerce_to' => 'DateTime', 'x.perl.coerce_rules'=>['From_str::natural']];
 my $URL_PREFIX = 'https://fastapi.metacpan.org/v1';
 
 our $db_schema_spec = {
