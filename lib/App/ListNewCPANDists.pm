@@ -214,10 +214,12 @@ _
             schema => $sch_date,
             req => 1,
             pos => 0,
+            cmdline_aliases => {from=>{}},
         },
         to_time   => {
             schema => $sch_date,
             pos => 1,
+            cmdline_aliases => {to=>{}},
         },
     },
     examples => [
@@ -230,19 +232,21 @@ _
     ],
 };
 sub list_new_cpan_dists {
+    require DateTime;
+
     my %args = @_;
 
     my $state = _init(\%args);
     my $dbh = $state->{dbh};
 
     my $from_time = $args{from_time};
-    my $to_time   = $args{to_time};
-    if (!$to_time) {
-        $to_time = $from_time->clone;
-        $to_time->set_hour(23);
-        $to_time->set_minute(59);
-        $to_time->set_second(59);
-    }
+    my $to_time   = $args{to_time} // DateTime->now;
+    #if (!$to_time) {
+    #    $to_time = $from_time->clone;
+    #    $to_time->set_hour(23);
+    #    $to_time->set_minute(59);
+    #    $to_time->set_second(59);
+    #}
     if ($args{-orig_to_time} && $args{-orig_to_time} !~ /T\d\d:\d\d:\d\d/) {
         $to_time->set_hour(23);
         $to_time->set_minute(59);
