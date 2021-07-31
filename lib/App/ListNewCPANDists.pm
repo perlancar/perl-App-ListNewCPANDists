@@ -390,7 +390,8 @@ sub list_new_cpan_dists {
     }
 
     my %resmeta = (
-        'table.fields' => [qw/dist author first_version first_time latest_version latest_time abstract/],
+        'table.fields'        => [qw/dist author first_version first_time  latest_version latest_time abstract/],
+        'table.field_formats' => [undef,  undef, undef,        'datetime', undef,         'datetime', undef],
         'func.stats' => create_new_cpan_dists_stats(dists => \@res)->[2],
     );
 
