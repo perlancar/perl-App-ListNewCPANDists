@@ -2,3 +2,4 @@ App-ListNewCPANDists-*
 .build
 *~
 nytprof*
+.DS_Store
