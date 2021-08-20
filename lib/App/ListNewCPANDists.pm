@@ -272,7 +272,6 @@ _
         %args_filter,
         from_time => {
             schema => $sch_date,
-            req => 1,
             pos => 0,
             cmdline_aliases => {from=>{}},
         },
@@ -281,6 +280,25 @@ _
             pos => 1,
             cmdline_aliases => {to=>{}},
         },
+
+        today => {
+            schema => 'true*',
+        },
+        this_week => {
+            schema => 'true*',
+            description => <<'_',
+
+Monday is the start of the week.
+
+_
+        },
+        this_month => {
+            schema => 'true*',
+        },
+        # this_year
+    },
+    args_rels => {
+        req_one => [qw/today this_week this_month from_time/],
     },
     examples => [
         {
@@ -299,7 +317,22 @@ sub list_new_cpan_dists {
     my $state = _init(\%args);
     my $dbh = $state->{dbh};
 
-    my $from_time = $args{from_time};
+    my $from_time;
+    if ($args{from_time}) {
+        $from_time = $args{from_time};
+    } elsif ($args{today}) {
+        $from_time = DateTime->today;
+    } elsif ($args{this_week}) {
+        my $today = DateTime->today;
+        my $dow   = $today->day_of_week;
+        my $days  = $dow > 1 ? $dow-1 : 7;
+        $from_time = $today->add(days => -$days);
+    } elsif ($args{this_month}) {
+        $from_time = DateTime->today->set(day => 1);
+    } else {
+        return [400, "Please specify today/this_week/this_month/from_time"];
+    }
+
     my $to_time   = $args{to_time} // DateTime->now;
     #if (!$to_time) {
     #    $to_time = $from_time->clone;
