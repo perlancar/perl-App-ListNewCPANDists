@@ -1,14 +1,14 @@
 package App::ListNewCPANDists;
 
-# AUTHORITY
-# DATE
-# DIST
-# VERSION
-
 use 5.010001;
 use strict;
 use warnings;
 use Log::ger;
+
+# AUTHORITY
+# DATE
+# DIST
+# VERSION
 
 our %SPEC;
 
@@ -81,6 +81,16 @@ our %args_filter = (
         schema => 're*',
         tags => ['category:filtering'],
     },
+    include_dists => {
+        'x.name.is_plural' => 1,
+        'x.name.singular' => 'exclude_dist',
+        schema => ['array*', of=>'perl::distname*'],
+        tags => ['category:filtering'],
+    },
+    include_dist_re => {
+        schema => 're*',
+        tags => ['category:filtering'],
+    },
     exclude_authors => {
         'x.name.is_plural' => 1,
         'x.name.singular' => 'exclude_author',
@@ -88,6 +98,16 @@ our %args_filter = (
         tags => ['category:filtering'],
     },
     exclude_author_re => {
+        schema => 're*',
+        tags => ['category:filtering'],
+    },
+    include_authors => {
+        'x.name.is_plural' => 1,
+        'x.name.singular' => 'include_author',
+        schema => ['array*', of=>'cpan::pause_id*'],
+        tags => ['category:filtering'],
+    },
+    include_author_re => {
         schema => 're*',
         tags => ['category:filtering'],
     },
@@ -408,13 +428,31 @@ sub list_new_cpan_dists {
                 log_info "Distribution %s matches exclude_dist_re, skipped", $dist;
                 next HIT;
             }
+            if ($args{include_dists} && @{ $args{include_dists} } &&
+                    !(grep {$dist eq $_} @{ $args{include_dists} })) {
+                log_info "Distribution %s is not in include_dists, skipped", $dist;
+                next HIT;
+            }
+            if ($args{include_dist_re} && $dist !~ /$args{include_dist_re}/) {
+                log_info "Distribution %s does not match include_dist_re, skipped", $dist;
+                next HIT;
+            }
             if ($args{exclude_authors} && @{ $args{exclude_authors} } &&
                     (grep {$row->{author} eq $_} @{ $args{exclude_authors} })) {
                 log_info "Author %s is in exclude_authors, skipped", $row->{author};
                 next HIT;
             }
             if ($args{exclude_author_re} && $hit->{fields}{author} =~ /$args{exclude_author_re}/) {
-                log_info "Author %s matches exclude_dist_re, skipped", $row->{author};
+                log_info "Author %s matches exclude_author_re, skipped", $row->{author};
+                next HIT;
+            }
+            if ($args{include_authors} && @{ $args{include_authors} } &&
+                    !(grep {$row->{author} eq $_} @{ $args{include_authors} })) {
+                log_info "Author %s is not in include_authors, skipped", $row->{author};
+                next HIT;
+            }
+            if ($args{include_author_re} && $hit->{fields}{author} !~ /$args{include_author_re}/) {
+                log_info "Author %s does not match include_author_re, skipped", $row->{author};
                 next HIT;
             }
         }
