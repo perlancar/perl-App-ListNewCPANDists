@@ -13,7 +13,6 @@ use Log::ger;
 our %SPEC;
 
 my $sch_date = ['date*', 'x.perl.coerce_to' => 'DateTime', 'x.perl.coerce_rules'=>['From_str::natural']];
-my $URL_PREFIX = 'https://fastapi.metacpan.org/v1';
 
 our $db_schema_spec = {
     summary => __PACKAGE__,
@@ -68,17 +67,6 @@ _
         schema =>'filename*',
         default => 'index-lncd.db',
         tags => ['common', 'category:db'],
-    },
-    max_results => {
-        summary => 'Maximum number of results to return, passed to MetaCPAN API',
-        description => <<'_',
-
-5000 seems to be the hard limit.
-
-_
-        schema => 'uint*',
-        default => 5000,
-        tags => ['common', 'category:metacpan'],
     },
 );
 
@@ -209,98 +197,6 @@ sub _init {
     $App::ListNewCPANDists::state;
 }
 
-sub _http_tiny {
-    state $obj = do {
-        require HTTP::Tiny;
-        HTTP::Tiny->new;
-    };
-    $obj;
-}
-
-sub _get_dist_release_times {
-    require Time::Local;
-
-    my ($state, $dist) = @_;
-
-    # save an API call if we can find a cache in database
-    my $dbh = $state->{dbh};
-    my ($distinfo) = $dbh->selectrow_hashref(
-        "SELECT * FROM dist WHERE name=?",
-        {},
-        $dist,
-    );
-    return $distinfo if $distinfo && $distinfo->{mtime} >= time() - 8*3600; # cache for 8 hours
-    my $row_exists = $distinfo ? 1:0;
-
-    # find first release time & version
-    unless ($distinfo) {
-        my $res = _http_tiny->post("$URL_PREFIX/release/_search?size=1&sort=date", {
-            content => _json_encode({
-                query => {
-                    terms => {
-                        distribution => [$dist],
-                    },
-                },
-                fields => [qw/name date version version_numified/],
-            }),
-        });
-
-        die "Can't retrieve first release information of distribution '$dist': ".
-            "$res->{status} - $res->{reason}\n" unless $res->{success};
-        my $api_res = _json_decode($res->{content});
-        my $hit = $api_res->{hits}{hits}[0];
-        die "No release information for distribution '$dist'" unless $hit;
-        $hit->{fields}{date} =~ /^(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/
-            or die "Can't parse date '$hit->{fields}{date}'";
-        my $time = Time::Local::timegm($6, $5, $4, $3, $2-1, $1);
-        $distinfo = {
-            name => $dist,
-            first_time => $time,
-            first_version => $hit->{fields}{version},
-        };
-    }
-
-    # find latest release time & version
-    {
-        my $res = _http_tiny->post("$URL_PREFIX/release/_search?size=1&sort=date:desc", {
-            content => _json_encode({
-                query => {
-                    terms => {
-                        distribution => [$dist],
-                    },
-                },
-                fields => [qw/name date version version_numified/],
-            }),
-        });
-
-        die "Can't retrieve latest release information of distribution '$dist': ".
-            "$res->{status} - $res->{reason}\n" unless $res->{success};
-        my $api_res = _json_decode($res->{content});
-        my $hit = $api_res->{hits}{hits}[0];
-        die "No release information for distribution '$dist'" unless $hit;
-        $hit->{fields}{date} =~ /^(\d\d\d\d)-(\d\d)-(\d\d)T(\d\d):(\d\d):(\d\d)/
-            or die "Can't parse date '$hit->{fields}{date}'";
-        my $time = Time::Local::timegm($6, $5, $4, $3, $2-1, $1);
-        $distinfo->{latest_time} = $time;
-        $distinfo->{latest_version} = $hit->{fields}{version};
-    }
-
-    # cache to database
-    if ($row_exists) {
-        $dbh->do("UPDATE dist SET first_version=?,first_time=?,latest_version=?,latest_time=?, mtime=? WHERE name=?", {},
-                 $distinfo->{first_version}, $distinfo->{first_time}, $distinfo->{latest_version}, $distinfo->{latest_time},
-                 time(),
-                 $distinfo->{name},
-             );
-    } else {
-        $dbh->do("INSERT INTO dist (name,first_version,first_time,latest_version,latest_time, mtime) VALUES (?,?,?,?,?, ?)", {},
-                 $distinfo->{name}, $distinfo->{first_version}, $distinfo->{first_time}, $distinfo->{latest_version}, $distinfo->{latest_time},
-                 time(),
-             );
-    }
-    $distinfo;
-}
-
 $SPEC{list_new_cpan_dists} = {
     v => 1.1,
     summary => 'List new CPAN distributions in a given time period',
@@ -399,8 +295,6 @@ sub list_new_cpan_dists {
     my $end_of_yesterday = $now->clone->add(days => -1)->set(hour => 23, minute => 59, second => 59);
     my $to_time   = $args{to_time} // $now->clone;
 
-    my $max_results = $args{max_results} // 5000;
-
     my $from_time;
     if ($args{from_time}) {
         $from_time = $args{from_time};
@@ -447,56 +341,32 @@ sub list_new_cpan_dists {
     log_trace("Retrieving releases from %s to %s ...",
               $from_time->datetime, $to_time->datetime);
 
-    # list all releases in the time period and collect unique list of
-    # distributions
-    my $res = _http_tiny->post("$URL_PREFIX/release/_search?size=$max_results&sort=name", {
-        content => _json_encode({
-            query => {
-                range => {
-                    date => {
-                        gte => $from_time->datetime,
-                        lte => $to_time->datetime,
-                    },
-                },
-            },
-            fields => [qw/name author distribution abstract date version version_numified/],
-        }),
-    });
-    return [$res->{status}, "Can't retrieve releases: $res->{reason}"]
-        unless $res->{success};
+    require App::MetaCPANUtils;
+    my $api_res = App::MetaCPANUtils::list_metacpan_releases(
+        from_date => $from_time,
+        to_date => $to_time,
+        fields => [qw/author date distribution abstract first/],
+    );
+    use DD; dd $api_res;
 
-    my $api_res = _json_decode($res->{content});
-    my %dists;
-    my @res;
-    my $num_hits = @{ $api_res->{hits}{hits} };
-    my $i = 0;
-  HIT:
-    for my $hit (@{ $api_res->{hits}{hits} }) {
-        $i++;
-        my $dist = $hit->{fields}{distribution};
-        next if $dists{ $dist }++;
-        log_trace("[#%d/%d] Got distribution %s", $i, $num_hits, $dist);
-        # find the first release of this distribution
-        my $distinfo = _get_dist_release_times($state, $dist);
-        unless ($distinfo->{first_time} >= $from_time->epoch &&
-                    $distinfo->{first_time} <= $to_time->epoch) {
-            log_trace("First release of distribution %s is not in this time period, skipped", $dist);
-            next;
-        }
+    #fields => [qw/name author distribution abstract date version version_numified/],
+
+    return [500, "Can't list MetaCPAN releases: $api_res->[0] - $api_res->[1]"]
+        unless $api_res->[0] == 200;
+
+    my @rows;
+    for my $row0 (@{ $api_res->[2] }) {
+        next unless $row0->{first};
         my $row = {
-            dist => $dist,
-            #release => $hit->{fields}{name},
-            author => $hit->{fields}{author},
-            first_version => $distinfo->{first_version},
-            first_time => $distinfo->{first_time},
-            latest_version => $distinfo->{latest_version},
-            latest_time => $distinfo->{latest_time},
-            abstract => $hit->{fields}{abstract},
-            date => $hit->{fields}{date},
+            dist => $row0->{distribution},
+            author => $row0->{author},
+            abstract => $row0->{abstract},
+            date => $row0->{date},
         };
         log_trace "row=%s", $row;
 
       FILTER: {
+            my $dist = $row->{dist};
             if ($args{exclude_dists} && @{ $args{exclude_dists} } &&
                     (grep {$dist eq $_} @{ $args{exclude_dists} })) {
                 log_info "Distribution %s is in exclude_dists, skipped", $dist;
@@ -520,7 +390,7 @@ sub list_new_cpan_dists {
                 log_info "Author %s is in exclude_authors, skipped", $row->{author};
                 next HIT;
             }
-            if ($args{exclude_author_re} && $hit->{fields}{author} =~ /$args{exclude_author_re}/) {
+            if ($args{exclude_author_re} && $row->{author} =~ /$args{exclude_author_re}/) {
                 log_info "Author %s matches exclude_author_re, skipped", $row->{author};
                 next HIT;
             }
@@ -529,22 +399,22 @@ sub list_new_cpan_dists {
                 log_info "Author %s is not in include_authors, skipped", $row->{author};
                 next HIT;
             }
-            if ($args{include_author_re} && $hit->{fields}{author} !~ /$args{include_author_re}/) {
+            if ($args{include_author_re} && $row->{author} !~ /$args{include_author_re}/) {
                 log_info "Author %s does not match include_author_re, skipped", $row->{author};
                 next HIT;
             }
         }
 
-        push @res, $row;
+        push @rows, $row;
     }
 
     my %resmeta = (
-        'table.fields'        => [qw/dist author first_version first_time  latest_version latest_time abstract/],
-        'table.field_formats' => [undef,  undef, undef,        'datetime', undef,         'datetime', undef],
-        'func.stats' => create_new_cpan_dists_stats(dists => \@res)->[2],
+        'table.fields'        => [qw/dist author abstract date/],
+        'table.field_formats' => [undef,  undef, undef, 'datetime'],
+        'func.stats' => create_new_cpan_dists_stats(dists => \@rows)->[2],
     );
 
-    [200, "OK", \@res, \%resmeta];
+    [200, "OK", \@rows, \%resmeta];
 }
 
 $SPEC{create_new_cpan_dists_stats} = {
