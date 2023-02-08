@@ -1,7 +1,9 @@
 0.020   2023-02-08  Released-By: PERLANCAR; Urgency: medium
 
         - Use App::MetaCPANUtils to workaround hard limit of 5000 when accessing
-          FastAPI directly.
+          FastAPI directly. As a consequence we are also a lot faster since we
+          request 'first' field directly and do not need to check each
+          distribution's first release date.
 
 
 0.019   2023-02-08  Released-By: PERLANCAR; Urgency: medium
