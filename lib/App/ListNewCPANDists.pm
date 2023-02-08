@@ -347,7 +347,6 @@ sub list_new_cpan_dists {
         to_date => $to_time,
         fields => [qw/author date distribution abstract first/],
     );
-    use DD; dd $api_res;
 
     #fields => [qw/name author distribution abstract date version version_numified/],
 
