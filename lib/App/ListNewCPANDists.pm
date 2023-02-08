@@ -113,6 +113,21 @@ our %args_filter = (
     },
 );
 
+our %args_time = (
+    from_time => {
+        schema => $sch_date,
+        pos => 0,
+        cmdline_aliases => {from=>{}},
+        tags => ['category:time-filtering'],
+    },
+    to_time   => {
+        schema => $sch_date,
+        pos => 1,
+        cmdline_aliases => {to=>{}},
+        tags => ['category:time-filtering'],
+    },
+);
+
 sub _json_encode {
     require JSON;
     JSON->new->encode($_[0]);
@@ -290,18 +305,7 @@ _
     args => {
         %args_common,
         %args_filter,
-        from_time => {
-            schema => $sch_date,
-            pos => 0,
-            cmdline_aliases => {from=>{}},
-            tags => ['category:time-filtering'],
-        },
-        to_time   => {
-            schema => $sch_date,
-            pos => 1,
-            cmdline_aliases => {to=>{}},
-            tags => ['category:time-filtering'],
-        },
+        %args_time,
 
         today => {
             schema => 'true*',
@@ -606,35 +610,10 @@ sub list_monthly_new_cpan_dists {
     );
 }
 
-$SPEC{list_monthly_new_cpan_dists_html} = {
-    v => 1.1,
-    summary => 'List new CPAN distributions in a given month (HTML format)',
-    description => <<'_',
-
-Like `list_monthly_new_cpan_dists` but produces HTML table instead of data
-structure.
-
-_
-    args => {
-        %args_filter,
-        month => {
-            schema => ['int*', min=>1, max=>12],
-            req => 1,
-            pos => 0,
-        },
-        year => {
-            schema => ['int*', min=>1990, max=>9999],
-            req => 1,
-            pos => 1,
-        },
-    },
-};
-sub list_monthly_new_cpan_dists_html {
+sub _htmlize {
     require HTML::Entities;
 
-    my %args = @_;
-
-    my $res = list_monthly_new_cpan_dists(%args);
+    my $res = shift;
 
     my @html;
 
@@ -683,6 +662,60 @@ sub list_monthly_new_cpan_dists_html {
     }
 
     [200, "OK", join("", @html), {'cmdline.skip_format'=>1}];
+}
+
+$SPEC{list_new_cpan_dists_html} = {
+    v => 1.1,
+    summary => 'List new CPAN distributions in a given month (HTML format)',
+    description => <<'_',
+
+Like `list_new_cpan_dists` but produces HTML table instead of data structure.
+
+_
+    args => {
+        %args_common,
+        %args_filter,
+        %args_time,
+    },
+};
+sub list_new_cpan_dists_html {
+    my %args = @_;
+
+    my $res = list_new_cpan_dists(%args);
+
+    _htmlize($res);
+}
+
+$SPEC{list_monthly_new_cpan_dists_html} = {
+    v => 1.1,
+    summary => 'List new CPAN distributions in a given month (HTML format)',
+    description => <<'_',
+
+Like `list_monthly_new_cpan_dists` but produces HTML table instead of data
+structure.
+
+_
+    args => {
+        %args_common,
+        %args_filter,
+        month => {
+            schema => ['int*', min=>1, max=>12],
+            req => 1,
+            pos => 0,
+        },
+        year => {
+            schema => ['int*', min=>1990, max=>9999],
+            req => 1,
+            pos => 1,
+        },
+    },
+};
+sub list_monthly_new_cpan_dists_html {
+    my %args = @_;
+
+    my $res = list_monthly_new_cpan_dists(%args);
+
+    _htmlize($res);
 }
 
 1;
