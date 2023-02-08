@@ -61,12 +61,19 @@ mirror, but can be just an empty directory. If you use happen to use
 (which also defaults to `~/cpan`) to store the database.
 
 _
-        tags => ['common'],
+        tags => ['common', 'category:local-cpan'],
     },
     db_name => {
         summary => 'Filename of database',
         schema =>'filename*',
         default => 'index-lncd.db',
+        tags => ['common', 'category:db'],
+    },
+    max_results => {
+        summary => 'Maximum number of results to return, passed to MetaCPAN API',
+        schema => 'uint*',
+        default => 10_000, # enough for a monthly worth of cpan releases
+        tags => ['common', 'category:metacpan'],
     },
 );
 
@@ -387,6 +394,8 @@ sub list_new_cpan_dists {
     my $end_of_yesterday = $now->clone->add(days => -1)->set(hour => 23, minute => 59, second => 59);
     my $to_time   = $args{to_time} // $now->clone;
 
+    my $max_results = $args{max_results} // 10_000;
+
     my $from_time;
     if ($args{from_time}) {
         $from_time = $args{from_time};
@@ -435,7 +444,7 @@ sub list_new_cpan_dists {
 
     # list all releases in the time period and collect unique list of
     # distributions
-    my $res = _http_tiny->post("$URL_PREFIX/release/_search?size=5000&sort=name", {
+    my $res = _http_tiny->post("$URL_PREFIX/release/_search?size=$max_results&sort=name", {
         content => _json_encode({
             query => {
                 range => {
