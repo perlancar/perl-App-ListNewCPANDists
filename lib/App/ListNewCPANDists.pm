@@ -71,8 +71,13 @@ _
     },
     max_results => {
         summary => 'Maximum number of results to return, passed to MetaCPAN API',
+        description => <<'_',
+
+5000 seems to be the hard limit.
+
+_
         schema => 'uint*',
-        default => 10_000, # enough for a monthly worth of cpan releases
+        default => 5000,
         tags => ['common', 'category:metacpan'],
     },
 );
@@ -394,7 +399,7 @@ sub list_new_cpan_dists {
     my $end_of_yesterday = $now->clone->add(days => -1)->set(hour => 23, minute => 59, second => 59);
     my $to_time   = $args{to_time} // $now->clone;
 
-    my $max_results = $args{max_results} // 10_000;
+    my $max_results = $args{max_results} // 5000;
 
     my $from_time;
     if ($args{from_time}) {
